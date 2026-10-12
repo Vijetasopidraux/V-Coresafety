@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V-Core Smart Safety</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column like a gate-post screen. Pick the gate, pick a helmet, scan, read the verdict, then the running log and zone count. */
+*{box-sizing:border-box}
+:root{
+  --bg:#E6EAED;
+  --surface:#F6F8F9;
+  --surface-2:#DAE1E6;
+  --ink:#13202B;
+  --ink-2:#4B5C6B;
+  --line:#C3CDD5;
+  --acc:#0B5CA0;
+  --on-acc:#FFFFFF;
+  --acc-bg:#D9E8F5;
+  --acc-ink:#0A4678;
+  --ok:#1D7A4A;
+  --on-ok:#FFFFFF;
+  --ok-bg:#D8EFE2;
+  --ok-ink:#0E4A2B;
+  --no:#C2302A;
+  --on-no:#FFFFFF;
+  --no-bg:#F8DCD9;
+  --no-ink:#7B1713;
+  --warn:#8F5A00;
+  --on-warn:#FFFFFF;
+  --cam:#0D1A25;
+  --f-display:'Barlow Condensed','Roboto Condensed','Arial Narrow',sans-serif;
+  --f-body:'Barlow','Segoe UI',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E161D;
+    --surface:#16212B;
+    --surface-2:#1F2D39;
+    --ink:#E6EDF2;
+    --ink-2:#97A8B6;
+    --line:#2B3A47;
+    --acc:#59A8E8;
+    --on-acc:#05213A;
+    --acc-bg:#12304B;
+    --acc-ink:#B3D7F6;
+    --ok:#4DC48B;
+    --on-ok:#06231A;
+    --ok-bg:#123324;
+    --ok-ink:#A9EBCB;
+    --no:#FF7A70;
+    --on-no:#3A0E0B;
+    --no-bg:#3A1B1A;
+    --no-ink:#FFC4BF;
+    --warn:#F2B705;
+    --on-warn:#2A1F00;
+    --cam:#0A121A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E161D;
+  --surface:#16212B;
+  --surface-2:#1F2D39;
+  --ink:#E6EDF2;
+  --ink-2:#97A8B6;
+  --line:#2B3A47;
+  --acc:#59A8E8;
+  --on-acc:#05213A;
+  --acc-bg:#12304B;
+  --acc-ink:#B3D7F6;
+  --ok:#4DC48B;
+  --on-ok:#06231A;
+  --ok-bg:#123324;
+  --ok-ink:#A9EBCB;
+  --no:#FF7A70;
+  --on-no:#3A0E0B;
+  --no-bg:#3A1B1A;
+  --no-ink:#FFC4BF;
+  --warn:#F2B705;
+  --on-warn:#2A1F00;
+  --cam:#0A121A;
+  color-scheme:dark;
+}
+body{margin:0;padding-inline:16px;padding-block:20px 36px;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--f-body);-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+
+.app{max-width:460px;margin:0 auto;display:grid;gap:22px}
+.app>*{min-width:0}
+
+.eyebrow{margin:0 0 6px;font:600 13px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+h1{margin:0 0 8px;font:700 34px/1.04 var(--f-display);text-wrap:balance}
+.note{margin:0;font-size:15px;color:var(--ink-2)}
+
+.lab{margin:0 0 8px;font:600 13px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.sec-h .lab{margin:0}
+
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rack{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.opt{appearance:none;background:var(--surface);border:1.5px solid var(--line);border-radius:6px;padding:10px 8px;text-align:left;min-width:0;display:grid;gap:2px;align-content:start}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:var(--acc-bg);color:var(--acc-ink)}
+.opt b{font:700 20px/1.1 var(--f-display);letter-spacing:.01em}
+.opt small{font-size:13px;line-height:1.25;color:var(--ink-2)}
+.opt[aria-pressed="true"] small{color:var(--acc-ink)}
+.helm{text-align:center;justify-items:center;padding:8px 4px 10px}
+.helm svg{width:100%;max-width:64px;height:auto;display:block}
+.helm b{font:600 15px/1.2 var(--f-body);letter-spacing:0}
+
+.req{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--ink-2)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);font-size:14px;font-weight:500}
+.chip i{width:8px;height:8px;background:var(--acc);display:block}
+
+.cam{position:relative;background:var(--cam);border-radius:10px;aspect-ratio:16/11;display:grid;place-items:center;padding-bottom:28px;overflow:hidden;--br:#FFFFFF;--sc:#7CC4FF}
+.cam[data-state="scanning"]{--br:#7CC4FF}
+.cam[data-state="ok"]{--br:#4DC48B}
+.cam[data-state="no"]{--br:#FF7A70}
+.tag{width:38%;aspect-ratio:1;border-radius:4px;overflow:hidden;background:#FFFFFF}
+.tag svg{display:block;width:100%;height:100%}
+.br{position:absolute;width:22px;height:22px;border:3px solid var(--br);transition:border-color .2s}
+.br.a{top:7%;left:22%;border-right:0;border-bottom:0}
+.br.b{top:7%;right:22%;border-left:0;border-bottom:0}
+.br.c{bottom:17%;left:22%;border-right:0;border-top:0}
+.br.d{bottom:17%;right:22%;border-left:0;border-top:0}
+.sw{position:absolute;top:7%;bottom:17%;left:22%;right:22%;overflow:hidden;pointer-events:none}
+.sw i{position:absolute;inset:0;border-bottom:2px solid var(--sc);transform:translateY(-100%);opacity:0}
+.cam[data-state="scanning"] .sw i{opacity:1;animation:sweep 1s ease-in-out infinite}
+@keyframes sweep{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.cs{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:8px;padding:8px 12px;font:500 12px/1.2 var(--f-mono);color:#B9C8D4}
+.go{display:block;width:100%;margin-top:10px;padding:13px 16px;border:0;border-radius:8px;background:var(--acc);color:var(--on-acc);font:700 22px/1 var(--f-display);letter-spacing:.05em;text-transform:uppercase}
+.go:hover{filter:brightness(1.08)}
+.go:active{transform:translateY(1px)}
+
+.res{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rh{display:flex;justify-content:space-between;gap:8px;padding:8px 16px;background:var(--surface-2);font:500 12px/1.3 var(--f-mono);color:var(--ink-2)}
+.who{display:flex;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.av{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);font:500 14px var(--f-mono)}
+.nm{font:700 25px/1.1 var(--f-display)}
+.mt{font:500 13px/1.4 var(--f-mono);color:var(--ink-2)}
+.sb{font-size:13px;color:var(--ink-2)}
+.ck{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;padding:11px 16px;border-bottom:1px solid var(--line)}
+.ck svg{margin-top:2px;display:block}
+.ck b{display:block;font-weight:500;font-size:15px;line-height:1.3}
+.ck span{display:block;font-size:14px;color:var(--ink-2)}
+.ck span.ws{color:var(--warn);font-weight:500}
+.tg{font:500 12px/1.2 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:2px 6px;color:var(--ink-2);margin-top:1px}
+.vd{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:16px}
+.vd.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.vd.no{background:var(--no-bg);color:var(--no-ink)}
+.vd svg{display:block}
+.vt{font:700 32px/1.05 var(--f-display)}
+.vd p{margin:6px 0 0;font-size:15px}
+.vd p.sm{font-size:13px}
+.empty{padding:26px 16px;color:var(--ink-2);font-size:15px}
+
+.tally{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tl{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.tl small{display:block;font-size:13px;color:var(--ink-2);line-height:1.2}
+.tl b{display:block;font:700 36px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.tl em{font:normal 400 12px var(--f-body);color:var(--ink-2)}
+
+.clr{background:transparent;border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:13px;color:var(--ink-2)}
+.clr:hover{background:var(--surface)}
+.log{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.log li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.log time{font:500 13px var(--f-mono);color:var(--ink-2)}
+.log b{display:block;font-weight:500;font-size:15px;line-height:1.25}
+.log small{display:block;font-size:13px;color:var(--ink-2)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:600}
+.pill.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.pill.no{background:var(--no-bg);color:var(--no-ink)}
+.foot{margin:0;font-size:13px;color:var(--ink-2)}
+
+@media (prefers-reduced-motion:reduce){
+  .cam[data-state="scanning"] .sw i{animation:none;transform:translateY(-50%)}
+  .br{transition:none}
+}
+</style>
+</head>
+<body>
+
+<main class="app">
+  <header>
+    <p class="eyebrow">V-Core · Smart Safety</p>
+    <h1>Pindai helm sebelum masuk</h1>
+    <p class="note">Simulasi pos K3 di proyek Gedung Rawat Inap RSUD Bekasi. Petugas memindai QR di helm, sistem langsung mengecek syarat gerbang dan mencatat hasilnya.</p>
+  </header>
+
+  <section aria-labelledby="l-gate">
+    <p class="lab" id="l-gate">Gerbang</p>
+    <div class="seg" id="gates"></div>
+    <div class="req" id="req"></div>
+  </section>
+
+  <section aria-labelledby="l-helm">
+    <p class="lab" id="l-helm">Helm pekerja (data contoh)</p>
+    <div class="rack" id="rack"></div>
+  </section>
+
+  <section aria-label="Pemindai">
+    <div class="cam" id="cam" data-state="idle">
+      <div class="tag" id="qr"></div>
+      <span class="br a"></span><span class="br b"></span><span class="br c"></span><span class="br d"></span>
+      <div class="sw"><i></i></div>
+      <div class="cs"><span id="cs1"></span><span id="cs2"></span></div>
+    </div>
+    <button class="go" id="go" type="button">Pindai helm</button>
+  </section>
+
+  <section aria-labelledby="l-res">
+    <p class="lab" id="l-res">Hasil</p>
+    <div class="res" id="res" role="status" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="l-zone">
+    <p class="lab" id="l-zone">Di dalam zona sekarang</p>
+    <div class="tally" id="tally"></div>
+  </section>
+
+  <section aria-labelledby="l-log">
+    <div class="sec-h">
+      <p class="lab" id="l-log">Log gerbang</p>
+      <button class="clr" id="clr" type="button" aria-label="Kosongkan log dan hitungan zona">Kosongkan</button>
+    </div>
+    <ul class="log" id="log"></ul>
+  </section>
+
+  <p class="foot">Semua nama, nomor ID, dan tanggal pekerja di halaman ini fiktif.</p>
+</main>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var GATES=[
+    {k:'A',n:'Zona A',s:'Struktur',req:['ind']},
+    {k:'B',n:'Zona B',s:'MEP',req:['ind']},
+    {k:'H',n:'Ketinggian',s:'Restricted area',req:['ind','har']}
+  ];
+  var REQ={ind:'Safety induction',har:'Full body harness'};
+  var W=[
+    {id:'PK-0017',n:'Rudi H.',role:'Tukang besi',sub:'Sub. pembesian',seed:17,ind:{ok:1,t:'Sudah, 20 Mei 2026'},har:{ok:1,t:'Berlaku s.d. 14 Mar 2027'},mcu:'Fit, 12 Mei 2026',vio:0,vn:'Tidak ada catatan'},
+    {id:'PK-0042',n:'Sari W.',role:'Staf QC',sub:'Tim kontraktor',seed:42,ind:{ok:1,t:'Sudah, 21 Mei 2026'},har:{ok:0,t:'Belum ada sertifikat'},mcu:'Fit, 14 Mei 2026',vio:0,vn:'Tidak ada catatan'},
+    {id:'PK-0063',n:'Dedi P.',role:'Operator alat',sub:'Sub. alat berat',seed:63,ind:{ok:0,t:'Belum mengikuti'},har:{ok:0,t:'Belum ada sertifikat'},mcu:'Fit, 08 Okt 2026',vio:0,vn:'Tidak ada catatan'},
+    {id:'PK-0088',n:'Anton M.',role:'Teknisi MEP',sub:'Sub. MEP',seed:88,ind:{ok:1,t:'Sudah, 02 Jun 2026'},har:{ok:0,exp:1,t:'Kedaluwarsa 02 Sep 2026'},mcu:'Fit, 28 Mei 2026',vio:1,vn:'1 catatan, terakhir 28 Sep 2026'}
+  ];
+  var st={g:0,w:0,busy:false,inside:{},log:[],last:null};
+  var reduce=false;
+  try{reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
+
+  function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function qrPath(seed){
+    var n=21,r=rng(seed*7919+13),d='';
+    function fin(y,x){return (y<8&&x<8)||(y<8&&x>12)||(y>12&&x<8)}
+    for(var y=0;y<n;y++){for(var x=0;x<n;x++){if(fin(y,x))continue;if(r()>0.5)d+='M'+x+' '+y+'h1v1h-1z'}}
+    [[0,0],[14,0],[0,14]].forEach(function(p){
+      var X=p[0],Y=p[1];
+      d+='M'+X+' '+Y+'h7v7h-7z M'+(X+1)+' '+(Y+1)+'v5h5v-5z M'+(X+2)+' '+(Y+2)+'h3v3h-3z';
+    });
+    return d;
+  }
+  function qrInner(seed){
+    return '<rect x="-2" y="-2" width="25" height="25" fill="#FFFFFF"/><path d="'+qrPath(seed)+'" fill="#101820"/>';
+  }
+  function qrSvg(seed){
+    return '<svg viewBox="-2 -2 25 25" aria-hidden="true">'+qrInner(seed)+'</svg>';
+  }
+  function helmet(seed){
+    return '<svg viewBox="0 0 80 62" aria-hidden="true">'+
+      '<path d="M8 44C8 22 23 9 40 9s32 13 32 35z" fill="#F2B705"/>'+
+      '<path d="M35 9h10v35H35z" fill="#D99A00"/>'+
+      '<path d="M4 44h72a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3v-2a3 3 0 0 1 3-3z" fill="#F2B705"/>'+
+      '<path d="M1 49h78a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z" fill="#C98B00"/>'+
+      '<svg x="30" y="25" width="20" height="20" viewBox="-2 -2 25 25">'+qrInner(seed)+'</svg>'+
+      '</svg>';
+  }
+
+  function icoRow(kind){
+    if(kind==='ok')return '<svg width="20" height="20" viewBox="0 0 20 20" aria-label="Terpenuhi" role="img"><circle cx="10" cy="10" r="9" fill="var(--ok)"/><path d="M5.5 10.3l3 3 6-6.4" fill="none" stroke="var(--on-ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if(kind==='no')return '<svg width="20" height="20" viewBox="0 0 20 20" aria-label="Belum terpenuhi" role="img"><circle cx="10" cy="10" r="9" fill="var(--no)"/><path d="M6.5 6.5l7 7M13.5 6.5l-7 7" fill="none" stroke="var(--on-no)" stroke-width="2" stroke-linecap="round"/></svg>';
+    return '<svg width="20" height="20" viewBox="0 0 20 20" aria-label="Perlu perhatian" role="img"><path d="M10 2l9 16H1z" fill="var(--warn)" stroke="var(--warn)" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v4.5" stroke="var(--on-warn)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="15.2" r="1.1" fill="var(--on-warn)"/></svg>';
+  }
+  function icoOkBig(){
+    return '<svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="6" fill="var(--ok)"/><path d="M11 23l8 8 15-17" fill="none" stroke="var(--on-ok)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function icoNoBig(){
+    return '<svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19" fill="#FFFFFF" stroke="var(--no)" stroke-width="5"/><path d="M8.6 8.6L35.4 35.4" stroke="var(--no)" stroke-width="5" stroke-linecap="round"/></svg>';
+  }
+  function icoPill(ok){
+    return ok
+      ? '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.3l2.7 2.7L10 3.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  }
+
+  function clock(){
+    try{return new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false}).replace('.',':')}catch(e){return '--:--'}
+  }
+
+  function buildControls(){
+    var gb=$('#gates'),h='';
+    GATES.forEach(function(g,i){
+      h+='<button type="button" class="opt" data-i="'+i+'" aria-pressed="'+(i===st.g)+'"><b>'+g.n+'</b><small>'+g.s+'</small></button>';
+    });
+    gb.innerHTML=h;
+    Array.prototype.forEach.call(gb.children,function(b){
+      b.onclick=function(){
+        if(st.busy)return;
+        st.g=+b.getAttribute('data-i');
+        markPressed(gb,st.g);
+        renderReq();
+        setCam('idle','Menunggu pindai');
+      };
+    });
+    var rk=$('#rack'),r='';
+    W.forEach(function(w,i){
+      r+='<button type="button" class="opt helm" data-i="'+i+'" aria-pressed="'+(i===st.w)+'" aria-label="Helm '+w.n+', '+w.role+'">'+helmet(w.seed)+'<b>'+w.n+'</b><small>'+w.role+'</small></button>';
+    });
+    rk.innerHTML=r;
+    Array.prototype.forEach.call(rk.children,function(b){
+      b.onclick=function(){
+        if(st.busy)return;
+        st.w=+b.getAttribute('data-i');
+        markPressed(rk,st.w);
+        setCam('idle','Menunggu pindai');
+      };
+    });
+  }
+  function markPressed(box,idx){
+    Array.prototype.forEach.call(box.children,function(c,j){c.setAttribute('aria-pressed',j===idx?'true':'false')});
+  }
+  function renderReq(){
+    var g=GATES[st.g],h='<span>Syarat masuk:</span>';
+    g.req.forEach(function(k){h+='<span class="chip"><i></i>'+REQ[k]+'</span>'});
+    if(g.req.indexOf('har')<0)h+='<span>Harness tidak diperiksa di sini.</span>';
+    $('#req').innerHTML=h;
+  }
+  function setCam(state,label){
+    var w=W[st.w];
+    $('#cam').setAttribute('data-state',state);
+    $('#qr').innerHTML=qrSvg(w.seed);
+    $('#cs1').textContent=w.id;
+    $('#cs2').textContent=label;
+  }
+
+  function evalScan(w,g){
+    var needHar=g.req.indexOf('har')>-1;
+    if(!w.ind.ok){
+      return {ok:false,why:'Belum mengikuti safety induction.',next:'Arahkan ke pos K3 untuk safety induction.'};
+    }
+    if(needHar&&!w.har.ok){
+      return {ok:false,
+        why:w.har.exp?'Sertifikat full body harness sudah kedaluwarsa.':'Belum punya sertifikasi full body harness.',
+        next:w.har.exp?'Perpanjang sertifikat sebelum bekerja di ketinggian.':'Ikutkan pelatihan kerja di ketinggian. Sementara, tugaskan di Zona A atau B.'};
+    }
+    var notes=[];
+    if(!needHar&&!w.har.ok){notes.push('Belum boleh ke area ketinggian: sertifikat harness '+(w.har.exp?'kedaluwarsa.':'belum ada.'))}
+    if(w.vio>0){notes.push('Ada '+w.vio+' catatan pelanggaran. Ingatkan sebelum mulai kerja.')}
+    return {ok:true,why:(g.k==='H'?'Area ketinggian':g.n)+' terbuka untuk '+w.n+'.',notes:notes};
+  }
+
+  function row(kind,label,detail,req,warn){
+    return '<div class="ck">'+icoRow(kind)+'<div><b>'+label+'</b><span'+(warn?' class="ws"':'')+'>'+detail+'</span></div>'+(req?'<span class="tg">Syarat</span>':'<span></span>')+'</div>';
+  }
+  function renderRes(){
+    var box=$('#res'),L=st.last;
+    if(!L){box.innerHTML='<div class="empty">Belum ada hasil. Pilih helm, lalu tekan Pindai helm.</div>';return}
+    var w=L.w,g=L.g,r=L.r,need=g.req,h='';
+    h+='<div class="rh"><span>Hasil pindai</span><span>'+L.t+' · '+g.n+'</span></div>';
+    h+='<div class="who"><div class="av" aria-hidden="true">'+w.n.slice(0,2).toUpperCase()+'</div><div><div class="nm">'+w.n+'</div><div class="mt">'+w.id+' · '+w.role+'</div><div class="sb">'+w.sub+'</div></div></div>';
+    h+=row(w.ind.ok?'ok':'no','Safety induction',w.ind.t,need.indexOf('ind')>-1,false);
+    h+=row(w.har.ok?'ok':'no','Sertifikat full body harness',w.har.t,need.indexOf('har')>-1,false);
+    h+=row('ok','Riwayat kesehatan',w.mcu,false,false);
+    h+=row(w.vio?'warn':'ok','Catatan pelanggaran K3',w.vn,false,!!w.vio);
+    if(r.ok){
+      h+='<div class="vd ok">'+icoOkBig()+'<div><div class="vt">Izin masuk</div><p>'+r.why+'</p>';
+      (r.notes||[]).forEach(function(n){h+='<p>'+n+'</p>'});
+      h+='<p class="sm">Tercatat otomatis di log V-Core.</p></div></div>';
+    }else{
+      h+='<div class="vd no">'+icoNoBig()+'<div><div class="vt">Masuk ditolak</div><p>'+r.why+'</p><p><b>Tindak lanjut:</b> '+r.next+'</p><p class="sm">Penolakan juga tercatat di log V-Core.</p></div></div>';
+    }
+    box.innerHTML=h;
+  }
+  function renderTally(){
+    var h='';
+    GATES.forEach(function(g){
+      var c=0;
+      for(var id in st.inside){if(st.inside[id]===g.k)c++}
+      h+='<div class="tl"><small>'+g.n+'</small><b>'+c+'</b><em>orang</em></div>';
+    });
+    $('#tally').innerHTML=h;
+  }
+  function renderLog(){
+    var box=$('#log');
+    if(!st.log.length){box.innerHTML='<li style="display:block;color:var(--ink-2);font-size:15px">Belum ada pindaian.</li>';return}
+    var h='';
+    st.log.forEach(function(x){
+      h+='<li><time>'+x.t+'</time><div><b>'+x.n+'</b><small>'+x.g+'</small></div><span class="pill '+(x.ok?'ok':'no')+'">'+icoPill(x.ok)+(x.ok?'Masuk':'Ditolak')+'</span></li>';
+    });
+    box.innerHTML=h;
+  }
+
+  function commit(w,g,r){
+    var t=clock();
+    st.last={w:w,g:g,r:r,t:t};
+    if(r.ok)st.inside[w.id]=g.k;
+    st.log.unshift({t:t,n:w.n,g:g.n,ok:r.ok});
+    if(st.log.length>6)st.log.pop();
+    renderRes();renderTally();renderLog();
+  }
+
+  var btn=$('#go');
+  btn.onclick=function(){
+    if(st.busy)return;
+    st.busy=true;
+    btn.setAttribute('aria-busy','true');
+    btn.textContent='Memindai…';
+    setCam('scanning','Memindai…');
+    setTimeout(function(){
+      var w=W[st.w],g=GATES[st.g],r=evalScan(w,g);
+      commit(w,g,r);
+      setCam(r.ok?'ok':'no',r.ok?'Izin masuk':'Ditolak');
+      st.busy=false;
+      btn.removeAttribute('aria-busy');
+      btn.textContent='Pindai helm';
+    },reduce?250:1000);
+  };
+  $('#clr').onclick=function(){
+    if(st.busy)return;
+    st.log=[];st.inside={};st.last=null;
+    renderRes();renderTally();renderLog();
+    setCam('idle','Menunggu pindai');
+  };
+
+  buildControls();
+  renderReq();
+  var r0=evalScan(W[0],GATES[0]);
+  commit(W[0],GATES[0],r0);
+  setCam('ok','Izin masuk');
+})();
+</script>
+
+</body>
+</html>
